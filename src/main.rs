@@ -77,6 +77,9 @@ enum Cmd {
         /// Feeds fetched in parallel
         #[arg(long, default_value_t = 8, value_name = "N")]
         jobs: usize,
+        /// Emit only entries with a publisher-supplied date (all are still stored and counted)
+        #[arg(long)]
+        dated: bool,
     },
     /// List stored entries, newest first. Never changes state.
     Items {
@@ -89,6 +92,9 @@ enum Cmd {
         /// Only starred entries
         #[arg(long)]
         starred: bool,
+        /// Only entries with a publisher-supplied date (excludes date_basis "discovered")
+        #[arg(long)]
+        dated: bool,
         #[command(flatten)]
         filter: FilterArgs,
         /// Maximum entries to list: a number or `all`
@@ -307,12 +313,14 @@ fn run(cli: Cli) -> Result<i32> {
             no_emit,
             timeout,
             jobs,
+            dated,
         } => {
             let emit = if no_emit { Some(0) } else { emit.0 };
             cmd_sync(
                 &mut open()?,
                 mode,
                 emit,
+                dated,
                 Duration::from_secs(timeout.max(1)),
                 jobs.max(1),
             )
@@ -321,6 +329,7 @@ fn run(cli: Cli) -> Result<i32> {
             unseen,
             seen,
             starred,
+            dated,
             filter,
             limit,
             offset,
@@ -342,6 +351,7 @@ fn run(cli: Cli) -> Result<i32> {
             f.unseen = unseen;
             f.seen = seen;
             f.starred = starred;
+            f.dated = dated;
             cmd_items(&db, mode, &f, limit.0, offset, full).map(|_| 0)
         }
         Cmd::Get { ids } => {
@@ -653,6 +663,7 @@ fn cmd_sync(
     db: &mut Db,
     mode: Mode,
     emit: Option<u64>,
+    dated: bool,
     timeout: Duration,
     jobs: usize,
 ) -> Result<i32> {
@@ -716,6 +727,7 @@ fn cmd_sync(
         let f = Filter {
             sync_id: Some(sync_id),
             exclude_baselined: true,
+            dated,
             ..Filter::default()
         };
         db.items(&f, emit, 0)?

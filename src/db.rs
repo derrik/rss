@@ -160,6 +160,8 @@ pub struct Filter {
     /// `effective_at >= after`
     pub after: Option<DateTime<Utc>>,
     pub exclude_baselined: bool,
+    /// Only entries whose date came from the publisher (`date_basis` != `discovered`).
+    pub dated: bool,
 }
 
 impl Filter {
@@ -177,6 +179,9 @@ impl Filter {
         }
         if self.exclude_baselined {
             clauses.push("i.baselined = 0".into());
+        }
+        if self.dated {
+            clauses.push("i.date_basis != 'discovered'".into());
         }
         if let Some(id) = self.sync_id {
             clauses.push("i.sync_id = ?".into());

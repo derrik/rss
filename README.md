@@ -74,6 +74,16 @@ Distinguishing the "no news" cases needs only one sync response:
 Always check `status` (or the exit code) too. **"No new stories" from a `partial` or
 `failed` sync is not a clean bill of health.**
 
+### Undated feeds and big imports
+
+Some feeds publish no dates. Their entries fall back to `date_basis: "discovered"`,
+so a newly subscribed archive sorts as if it all arrived just now. Two tools help:
+
+- `--dated` on `sync` and `items` leaves those entries out of headlines. They are
+  still stored, counted, and reachable without the flag.
+- `import --baseline` (or `add --baseline`) marks each feed's first batch seen, so
+  importing dozens of subscriptions doesn't produce a 2,000-story "new" pile.
+
 ## Commands
 
 | Command | Purpose |
@@ -81,7 +91,7 @@ Always check `status` (or the exit code) too. **"No new stories" from a `partial
 | `add URL... [--baseline]` | Subscribe. `-` reads URLs from stdin (one per line; `#` comments OK). |
 | `feeds [--all]` | List subscriptions with fetch status and counts. `--all` includes removed feeds. |
 | `remove FEED...` | Unsubscribe by feed ID or URL. Articles and their state are kept. |
-| `sync [--emit N\|all] [--no-emit] [--timeout S] [--jobs N]` | Fetch all feeds, store everything new, and emit up to N (default 5). |
+| `sync [--emit N\|all] [--no-emit] [--dated] [--timeout S] [--jobs N]` | Fetch all feeds, store everything new, and emit up to N (default 5). `--dated` emits only entries with a publisher date. |
 | `items [filters] [--limit N\|all] [--offset N] [--full] [--ids]` | List stored entries, newest first (default limit 20). Never changes state. |
 | `get ID...` | Full records, including raw and plain-text bodies. |
 | `status [--older-than AGE \| --before TIME]` | Counts, unseen date range, optional stale count, last sync outcome. |
@@ -95,7 +105,7 @@ Every ID-taking command accepts `-` to read IDs from stdin. Input can be bare
 integers or JSONL item records, so `rss items --jsonl | jq -c 'select(…)' | rss seen -`
 works.
 
-**Filters** (on `items` and `seen`): `--unseen`, `--seen`, `--starred` (items only),
+**Filters** (on `items` and `seen`): `--unseen`, `--seen`, `--starred` and `--dated` (items only),
 `--sync ID`, `--feed FEED`, `--older-than AGE` / `--before TIME`, and `--newer-than AGE` /
 `--after TIME`. Filters combine with AND.
 - Ages look like `30m`, `12h`, `3d`, `1w`.

@@ -859,6 +859,45 @@ fn date_basis_falls_back_for_missing_and_future_dates() {
 }
 
 #[test]
+fn dated_filter_keeps_undated_backlog_out_of_headlines() {
+    let srv = Server::start();
+    // An undated feed's archive would otherwise sort as "discovered just now".
+    let mut list: Vec<Entry> = (1..=6)
+        .map(|i| entry(&format!("undated{i}"), None))
+        .collect();
+    list.extend(entries("dated", 2, Age::zero()));
+    srv.set("/a", rss("A", &list));
+    let r = Rss::new();
+    r.ok(&["add", &srv.url("/a")]);
+
+    let s = r.ok(&["sync", "--dated", "--json"]);
+    assert_eq!(s["new"], 8, "everything is still stored and counted");
+    assert_eq!(s["emitted"], 2);
+    assert_eq!(s["remaining"], 6);
+    assert!(
+        s["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["date_basis"] == "published")
+    );
+
+    let all = r.ok(&["items", "--unseen", "--limit", "5", "--json"]);
+    assert!(
+        all["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["date_basis"] == "discovered")
+    );
+    let dated = r.ok(&["items", "--unseen", "--dated", "--json"]);
+    assert_eq!(dated["total"], 2);
+    assert_eq!(dated["items"][0]["title"], "Headline dated1");
+    // --dated is a listing filter, not a bulk-acknowledgment scope.
+    assert_eq!(r.run(&["seen", "--dated"]).code, 2);
+}
+
+#[test]
 fn parse_needs_no_database() {
     let r = Rss::new();
     let o = r.run_in(

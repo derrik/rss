@@ -1,5 +1,11 @@
-
-
-# Added by cargo
-
+# Build output
 /target
+
+# Local databases (e.g. RSS_DB=./rss.db) and SQLite WAL/journal files
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# OS cruft
+.DS_Store
